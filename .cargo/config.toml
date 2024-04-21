@@ -1,0 +1,4 @@
+[env]
+RUST_LOG = "rust_ticket=debug"
+
+SERVICE_WEB_FOLDER = "web_folder/"

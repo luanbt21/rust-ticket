@@ -2,6 +2,16 @@ use crate::{ctx::Ctx, Error, Result};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 
+mod error;
+
+pub struct ModelManager {}
+
+impl ModelManager {
+    pub async fn new() -> std::prelude::v1::Result<ModelManager, String> {
+        Ok(ModelManager {})
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub struct Ticket {
     pub id: u64,

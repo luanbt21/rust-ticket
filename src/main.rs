@@ -1,12 +1,20 @@
-pub use self::error::{Error, Result};
-use crate::{log::log_request, model::ModelController};
+mod config;
+mod ctx;
+mod error;
+mod log;
+mod model;
+mod web;
+
+use crate::{log::log_request, model::ModelController, web::routes_static::serve_dir};
+pub use config::config;
+pub use error::{Error, Result};
 
 use axum::{
     extract::{Path, Query},
     http::{Method, Uri},
     middleware,
     response::{Html, IntoResponse, Response},
-    routing::{get, get_service},
+    routing::get,
     Json, Router,
 };
 use ctx::Ctx;
@@ -14,17 +22,18 @@ use serde::Deserialize;
 use serde_json::json;
 use tokio::net::TcpListener;
 use tower_cookies::CookieManagerLayer;
-use tower_http::services::ServeDir;
+use tracing::{debug, info};
+use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
-
-mod ctx;
-mod error;
-mod log;
-mod model;
-mod web;
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    tracing_subscriber::fmt()
+        .without_time()
+        .with_target(false)
+        .with_env_filter(EnvFilter::from_default_env())
+        .init();
+
     let mc = ModelController::new().await?;
 
     let routes_api = web::routes_tickets::routes(mc.clone())
@@ -40,10 +49,10 @@ async fn main() -> Result<()> {
             web::mw_auth::mw_ctx_resolver,
         ))
         .layer(CookieManagerLayer::new())
-        .fallback_service(routes_status());
+        .fallback_service(serve_dir());
 
     let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
-    println!("->> LISTENING on {:?}\r", listener.local_addr());
+    info!("LISTENING on {:?}\r", listener.local_addr());
     axum::serve(listener, routes_all.into_make_service())
         .await
         .unwrap();
@@ -57,7 +66,7 @@ async fn main_response_mapper(
     req_method: Method,
     res: Response,
 ) -> Response {
-    println!("->> {:12} - main_response_mapper", "RES_MAPPER");
+    debug!("{:12} - main_response_mapper", "RES_MAPPER");
     let uuid = Uuid::new_v4();
 
     let service_error = res.extensions().get::<Error>();
@@ -73,7 +82,7 @@ async fn main_response_mapper(
                 }
             });
 
-            println!("   ->> client_error_body: {client_error_body}");
+            debug!("client_error_body: {client_error_body}");
 
             (*status_code, Json(client_error_body)).into_response()
         });
@@ -81,12 +90,8 @@ async fn main_response_mapper(
     let client_error = client_status_error.unzip().1;
     let _ = log_request(uuid, req_method, uri, ctx, service_error, client_error).await;
 
-    println!();
+    debug!("\n");
     error_response.unwrap_or(res)
-}
-
-fn routes_status() -> Router {
-    Router::new().nest_service("/", get_service(ServeDir::new("./")))
 }
 
 fn routes_hello() -> Router {
@@ -101,12 +106,12 @@ struct HelloParams {
 }
 
 async fn handler_hello(Query(params): Query<HelloParams>) -> impl IntoResponse {
-    println!("->> {:12} - handler_hello", "HANDLER");
+    debug!("{:12} - handler_hello", "HANDLER");
     let name = params.name.as_deref().unwrap_or("World!");
     Html(format!("Hello <string>{name}</strong>"))
 }
 
 async fn handler_hello2(Path(name): Path<String>) -> impl IntoResponse {
-    println!("->> {:12} - handler_hello2", "HANDLER");
+    debug!("{:12} - handler_hello2", "HANDLER");
     Html(format!("Hello <string>{name}</strong>"))
 }

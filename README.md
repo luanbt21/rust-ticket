@@ -8,7 +8,7 @@ Github repo: https://github.com/jeremychone-channel/rust-axum-course
 
 ```sh
 # Terminal 1 - For server run.
-cargo watch -q -c -w src/ -x "run"
+cargo watch -q -c -w src/ -w .cargo/ -x "run"
 
 # Terminal 2 - For test.
 cargo watch -q -c -w examples/ -x "run --example quick_dev"

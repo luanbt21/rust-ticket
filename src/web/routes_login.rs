@@ -3,13 +3,14 @@ use axum::{routing::post, Json, Router};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use tower_cookies::{Cookie, Cookies};
+use tracing::debug;
 
 pub fn routes() -> Router {
     Router::new().route("/api/login", post(api_login))
 }
 
 async fn api_login(cookies: Cookies, payload: Json<LoginPayload>) -> Result<Json<Value>> {
-    println!("->> {:<12} - api_login", "HANDLED");
+    debug!("{:<12} - api_login", "HANDLED");
 
     if payload.username != "user1" || payload.pwd != "pass1" {
         return Err(Error::LoginFail);

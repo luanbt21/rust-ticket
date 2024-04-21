@@ -1,3 +1,5 @@
+mod error;
+
 #[derive(Clone, Debug)]
 pub struct Ctx {
     user_id: u64,
